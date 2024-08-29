@@ -50,6 +50,9 @@ datashaper = "^0.0.49"
 azure-search-documents = "^11.4.0"
 lancedb = "^0.12.0"
 
+# LangSmith
+langsmith = "0.1.84"
+
 # Event Loops
 uvloop = { version = "^0.20.0", markers = "platform_system != 'Windows'" }
 nest-asyncio = { version = "^1.6.0", markers = "platform_system == 'Windows'" }

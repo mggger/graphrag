@@ -21,6 +21,8 @@ from graphrag.query.structured_search.local_search.system_prompt import (
     LOCAL_SEARCH_SYSTEM_PROMPT,
 )
 
+from langsmith.run_helpers import traceable
+
 DEFAULT_LLM_PARAMS = {
     "max_tokens": 1500,
     "temperature": 0.0,
@@ -33,15 +35,15 @@ class LocalSearch(BaseSearch):
     """Search orchestration for local search mode."""
 
     def __init__(
-        self,
-        llm: BaseLLM,
-        context_builder: LocalContextBuilder,
-        token_encoder: tiktoken.Encoding | None = None,
-        system_prompt: str = LOCAL_SEARCH_SYSTEM_PROMPT,
-        response_type: str = "multiple paragraphs",
-        callbacks: list[BaseLLMCallback] | None = None,
-        llm_params: dict[str, Any] = DEFAULT_LLM_PARAMS,
-        context_builder_params: dict | None = None,
+            self,
+            llm: BaseLLM,
+            context_builder: LocalContextBuilder,
+            token_encoder: tiktoken.Encoding | None = None,
+            system_prompt: str = LOCAL_SEARCH_SYSTEM_PROMPT,
+            response_type: str = "multiple paragraphs",
+            callbacks: list[BaseLLMCallback] | None = None,
+            llm_params: dict[str, Any] = DEFAULT_LLM_PARAMS,
+            context_builder_params: dict | None = None,
     ):
         super().__init__(
             llm=llm,
@@ -55,10 +57,10 @@ class LocalSearch(BaseSearch):
         self.response_type = response_type
 
     async def asearch(
-        self,
-        query: str,
-        conversation_history: ConversationHistory | None = None,
-        **kwargs,
+            self,
+            query: str,
+            conversation_history: ConversationHistory | None = None,
+            **kwargs,
     ) -> SearchResult:
         """Build local search context that fits a single context window and generate answer for the user query."""
         start_time = time.time()
@@ -80,12 +82,7 @@ class LocalSearch(BaseSearch):
                 {"role": "user", "content": query},
             ]
 
-            response = await self.llm.agenerate(
-                messages=search_messages,
-                streaming=True,
-                callbacks=self.callbacks,
-                **self.llm_params,
-            )
+            response = await self.acall_llm(search_messages, self.callbacks, self.llm_params)
 
             return SearchResult(
                 response=response,
@@ -108,9 +105,9 @@ class LocalSearch(BaseSearch):
             )
 
     async def astream_search(
-        self,
-        query: str,
-        conversation_history: ConversationHistory | None = None,
+            self,
+            query: str,
+            conversation_history: ConversationHistory | None = None,
     ) -> AsyncGenerator:
         """Build local search context that fits a single context window and generate answer for the user query."""
         start_time = time.time()
@@ -132,17 +129,17 @@ class LocalSearch(BaseSearch):
         # send context records first before sending the reduce response
         yield context_records
         async for response in self.llm.astream_generate(  # type: ignore
-            messages=search_messages,
-            callbacks=self.callbacks,
-            **self.llm_params,
+                messages=search_messages,
+                callbacks=self.callbacks,
+                **self.llm_params,
         ):
             yield response
 
     def search(
-        self,
-        query: str,
-        conversation_history: ConversationHistory | None = None,
-        **kwargs,
+            self,
+            query: str,
+            conversation_history: ConversationHistory | None = None,
+            **kwargs,
     ) -> SearchResult:
         """Build local search context that fits a single context window and generate answer for the user question."""
         start_time = time.time()
@@ -189,3 +186,18 @@ class LocalSearch(BaseSearch):
                 llm_calls=1,
                 prompt_tokens=num_tokens(search_prompt, self.token_encoder),
             )
+
+    @traceable(
+        run_type="chain",
+        name="call llm",
+        tags=["graphrag"]
+    )
+    async def acall_llm(self, search_messages, callbacks, params):
+        response = await self.llm.agenerate(
+            messages=search_messages,
+            streaming=True,
+            callbacks=callbacks,
+            **params
+        )
+
+        return response

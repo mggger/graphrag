@@ -12,6 +12,7 @@ from graphrag.query.input.retrieval.entities import (
 )
 from graphrag.query.llm.base import BaseTextEmbedding
 from graphrag.vector_stores import BaseVectorStore
+from langsmith.run_helpers import traceable
 
 
 class EntityVectorStoreKey(str, Enum):
@@ -32,16 +33,21 @@ class EntityVectorStoreKey(str, Enum):
         raise ValueError(msg)
 
 
+@traceable(
+    run_type="chain",
+    name="query vectorstore",
+    tags=["graphrag"]
+)
 def map_query_to_entities(
-    query: str,
-    text_embedding_vectorstore: BaseVectorStore,
-    text_embedder: BaseTextEmbedding,
-    all_entities: list[Entity],
-    embedding_vectorstore_key: str = EntityVectorStoreKey.ID,
-    include_entity_names: list[str] | None = None,
-    exclude_entity_names: list[str] | None = None,
-    k: int = 10,
-    oversample_scaler: int = 2,
+        query: str,
+        text_embedding_vectorstore: BaseVectorStore,
+        text_embedder: BaseTextEmbedding,
+        all_entities: list[Entity],
+        embedding_vectorstore_key: str = EntityVectorStoreKey.ID,
+        include_entity_names: list[str] | None = None,
+        exclude_entity_names: list[str] | None = None,
+        k: int = 10,
+        oversample_scaler: int = 2,
 ) -> list[Entity]:
     """Extract entities that match a given query using semantic similarity of text embeddings of query and entity descriptions."""
     if include_entity_names is None:
@@ -85,13 +91,13 @@ def map_query_to_entities(
 
 
 def find_nearest_neighbors_by_graph_embeddings(
-    entity_id: str,
-    graph_embedding_vectorstore: BaseVectorStore,
-    all_entities: list[Entity],
-    exclude_entity_names: list[str] | None = None,
-    embedding_vectorstore_key: str = EntityVectorStoreKey.ID,
-    k: int = 10,
-    oversample_scaler: int = 2,
+        entity_id: str,
+        graph_embedding_vectorstore: BaseVectorStore,
+        all_entities: list[Entity],
+        exclude_entity_names: list[str] | None = None,
+        embedding_vectorstore_key: str = EntityVectorStoreKey.ID,
+        k: int = 10,
+        oversample_scaler: int = 2,
 ) -> list[Entity]:
     """Retrieve related entities by graph embeddings."""
     if exclude_entity_names is None:
@@ -131,11 +137,11 @@ def find_nearest_neighbors_by_graph_embeddings(
 
 
 def find_nearest_neighbors_by_entity_rank(
-    entity_name: str,
-    all_entities: list[Entity],
-    all_relationships: list[Relationship],
-    exclude_entity_names: list[str] | None = None,
-    k: int | None = 10,
+        entity_name: str,
+        all_entities: list[Entity],
+        all_relationships: list[Relationship],
+        exclude_entity_names: list[str] | None = None,
+        k: int | None = 10,
 ) -> list[Entity]:
     """Retrieve entities that have direct connections with the target entity, sorted by entity rank."""
     if exclude_entity_names is None:
