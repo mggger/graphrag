@@ -160,13 +160,7 @@ class LocalSearch(BaseSearch):
                 {"role": "user", "content": query},
             ]
 
-            response = self.llm.generate(
-                messages=search_messages,
-                streaming=True,
-                callbacks=self.callbacks,
-                **self.llm_params,
-            )
-
+            response = self.call_llm(search_messages, self.callbacks, self.llm_params)
             return SearchResult(
                 response=response,
                 context_data=context_records,
@@ -194,6 +188,21 @@ class LocalSearch(BaseSearch):
     )
     async def acall_llm(self, search_messages, callbacks, params):
         response = await self.llm.agenerate(
+            messages=search_messages,
+            streaming=True,
+            callbacks=callbacks,
+            **params
+        )
+
+        return response
+
+    @traceable(
+        run_type="chain",
+        name="call llm",
+        tags=["graphrag"]
+    )
+    def call_llm(self, search_messages, callbacks, params):
+        response = self.llm.generate(
             messages=search_messages,
             streaming=True,
             callbacks=callbacks,
